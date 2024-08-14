@@ -21,6 +21,8 @@
 ---
 
 # Kubernetes Architecture
+![Kubernetes Architecture](https://kubernetes.io/images/docs/kubernetes-cluster-architecture.svg)
+
 
 Kubernetes has two main components:
 
