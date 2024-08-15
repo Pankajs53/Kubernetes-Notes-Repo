@@ -141,3 +141,41 @@ Kubernetes has two main components:
      - Exposes the service externally using a cloud provider's load balancer.
      - Automatically provisions a public IP, making the application accessible from the internet.
      - This type works primarily in cloud environments.
+## Ingress
+
+Before Ingress was introduced in Kubernetes, there were a couple of challenges with exposing and managing services:
+
+### 1. Limited Load Balancing Features:
+
+a) The load balancing provided by Kubernetes Services was relatively basic, typically using simple round-robin techniques. However, more advanced load balancing techniques are often needed in production environments, such as:
+- Ratio-Based Load Balancing
+- Sticky Sessions
+- Path-Based Routing
+- Domain-Based Routing
+- Whitelisting and Blacklisting
+
+b) These advanced load balancing features are typically provided by enterprise-level load balancers like Nginx and F5.
+
+### 2. High Cost of Static IPs:
+
+a) Exposing each service using a LoadBalancer type Service in Kubernetes required a static IP. For environments with a large number of services (e.g., 100 services), this could become very costly, as each service would need its own static IP.
+
+b) Enterprise load balancers allow for more efficient IP management by requiring only one main static IP. This IP can handle traffic for multiple services based on domain-based routing, thereby reducing the overall cost.
+
+### How Ingress Solves These Problems
+Ingress in Kubernetes provides a solution to these issues by:
+
+1. **Advanced Load Balancing and TLS Termination:**
+   - Ingress allows you to perform enterprise-level load balancing with features such as path-based and domain-based routing. It also supports TLS termination, which handles HTTPS traffic.
+
+2. **Cost Efficiency:**
+   - Instead of needing a separate static IP for each service, Ingress allows multiple services to be exposed through a single IP address. This is achieved by routing requests to different services based on rules defined in the Ingress resource, thereby significantly reducing the need for multiple static IPs and the associated costs.
+
+### Ingress Resources and Ingress Controllers
+- Users create Ingress resources, while load balancing organizations create/write their own Ingress controllers. These controllers are typically shared on platforms like GitHub, along with instructions on how to install and use them, either via Helm charts or YAML files.
+- As a user, it's essential to deploy an Ingress controller in addition to creating Ingress resources. The choice of Ingress controller depends on your needs. At the end of the day, Ingress controllers are a type of load balancer, and some may also function as an API Gateway, offering additional capabilities.
+  
+- The Ingress controller monitors or "watches" for Ingress resources. An Ingress resource is simply a YAML file that defines the routing rules.
+  
+- **Note:** If you're running Kubernetes locally, you'll need to map the cluster IP with the domain name through which you want to access the services in the `/etc/hosts` file.
+
