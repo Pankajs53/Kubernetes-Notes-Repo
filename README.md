@@ -179,3 +179,113 @@ Ingress in Kubernetes provides a solution to these issues by:
   
 - **Note:** If you're running Kubernetes locally, you'll need to map the cluster IP with the domain name through which you want to access the services in the `/etc/hosts` file.
 
+  ## ConfigMaps and Secrets in Kubernetes
+
+### ConfigMaps:
+1. **Purpose:** ConfigMaps are used to store non-sensitive configuration data in key-value pairs that can be consumed by applications running in pods. The data in ConfigMaps can be used to configure application behavior without modifying the container image or application code. This is particularly useful when you don't have direct access to the container or want to externalize configuration.
+
+2. **Usage:** ConfigMaps can be mounted into pods as environment variables, command-line arguments, or configuration files. This flexibility allows you to decouple configuration from application code, enabling changes to configuration without rebuilding Docker images.
+
+3. **Problem Solved:** ConfigMaps help solve the problem of externalizing configuration data, making it easy to update application settings without modifying the application code or redeploying the container image.
+
+4. **Limitations:** While ConfigMaps are suitable for storing general configuration data, they are not designed for sensitive information like passwords, API keys, or tokens. This is where Secrets come into play.
+
+### Secrets:
+1. **Purpose:** Secrets are used to store sensitive data, such as passwords, API keys, and tokens, in a secure manner. Unlike ConfigMaps, Secrets are designed with security in mind, ensuring that the data is encrypted both in transit and at rest within the Kubernetes cluster.
+
+2. **Security:** When a Secret is created, Kubernetes stores it in the etcd database in an encrypted format. This prevents unauthorized users from easily accessing sensitive data even if they gain access to etcd. By default, Kubernetes uses Base64 encoding for data in Secrets, but you can configure additional encryption mechanisms for enhanced security.
+
+3. **RBAC Integration:** Role-Based Access Control (RBAC) should be used to restrict access to Secrets, ensuring that only authorized users and service accounts can view or modify them. This further enhances security by enforcing the principle of least privilege.
+
+### Why Use Secrets Instead of ConfigMaps?
+1. **Encryption:** Secrets are encrypted by default, making them suitable for storing sensitive information. ConfigMaps, on the other hand, do not offer encryption and are stored in plain text within etcd.
+
+2. **Security Best Practices:** Storing sensitive data in ConfigMaps is not recommended because it exposes the data to potential security risks. Secrets provide a secure way to handle such data, reducing the risk of unauthorized access.
+
+### Updating ConfigMaps and Secrets:
+1. **ConfigMap Updates:**
+   - When you update a ConfigMap, the new data does not automatically propagate to existing pods using that ConfigMap as environment variables. To apply the updated configuration, you typically need to restart the pods, which can lead to temporary downtime.
+
+2. **Using Volume Mounts:**
+   - To avoid the need for pod restarts, you can mount ConfigMaps or Secrets as files inside a pod using VolumeMounts. When the ConfigMap or Secret is updated, the mounted files will be automatically updated without needing to restart the pods. This ensures that your application can dynamically pick up configuration changes without causing downtime.
+
+### Example Use Case:
+If your application reads configuration data from a file (mounted via a VolumeMount), you can update the ConfigMap or Secret, and the changes will be reflected in the file without restarting the pod. This is particularly useful in production environments where minimizing downtime is critical.
+
+## RBAC (Role-Based Access Control)
+
+RBAC in Kubernetes is a mechanism that allows you to manage access and permissions for users and applications interacting with the Kubernetes cluster. It primarily deals with:
+
+1. **User Management**
+2. **Managing Access to Applications Running on the Cluster**
+
+### There are three major components in RBAC:
+
+1. **Service Accounts/Users**
+2. **Roles/ClusterRoles**
+3. **RoleBindings/ClusterRoleBindings**
+
+### Service Accounts/Users:
+- **Kubernetes does not manage user identities directly; instead, it delegates user management to external identity providers.**
+  - For example, in AWS (EKS), identity management can be handled through AWS IAM. IAM policies can be created to allow or restrict access to the Kubernetes API.
+
+- **Service Accounts:**
+  1. A Service Account is a special type of account in Kubernetes that is used by pods to interact with the Kubernetes API. Service Accounts are defined within a namespace and are typically used to manage permissions for applications running inside the cluster.
+  2. Service Accounts can be created using a YAML file and are automatically attached to a pod if no Service Account is specified during pod creation. This default Service Account allows the pod to interact with the Kubernetes API with minimal permissions.
+
+### Roles/ClusterRoles:
+- **Roles and ClusterRoles define what actions a user or Service Account can perform within the cluster.**
+
+  - **Role:**
+    - A Role is a namespaced resource that defines permissions (such as accessing Pods, ConfigMaps, Secrets, etc.) within a specific namespace. It is defined using a YAML file and is similar to IAM policies in cloud providers.
+
+  - **ClusterRole:**
+    - A ClusterRole is similar to a Role but is not restricted to a single namespace. It can define permissions across the entire cluster. ClusterRoles are useful for granting permissions that are not specific to a single namespace, such as managing nodes or cluster-wide resources.
+
+### RoleBindings/ClusterRoleBindings:
+- **RoleBinding and ClusterRoleBinding are used to attach Roles and ClusterRoles to users or Service Accounts.**
+
+  - **RoleBinding:**
+    - A RoleBinding attaches a Role to a user or Service Account within a specific namespace, granting the defined permissions to that entity in that namespace.
+
+  - **ClusterRoleBinding:**
+    - A ClusterRoleBinding attaches a ClusterRole to a user or Service Account at the cluster level, granting the defined permissions cluster-wide.
+
+### Example Workflow:
+1. Define a Role in a namespace that allows certain actions, such as reading Secrets or managing Pods.
+2. Create a Service Account for a specific application that will be running in the cluster.
+3. Bind the Role to the Service Account using a RoleBinding. This grants the application the necessary permissions to perform its tasks within that namespace.
+
+If the permissions are needed across multiple namespaces or cluster-wide, you would use ClusterRoles and ClusterRoleBindings instead.
+
+---
+
+## Custom Resources:
+
+In Kubernetes, there are default resources like Pods, Services, and Deployments that come out of the box. However, sometimes these built-in resources may not be sufficient for all needs. To extend Kubernetes' API or introduce new types of resources, we can use Custom Resources (CRs).
+
+### Custom Resources allow us to add new resource types to Kubernetes, tailored to specific needs that Kubernetes doesn't natively support. For example:
+- If we need advanced security features that Kubernetes doesn't offer by default, we can introduce tools like Kube Hunter or Kube Bench.
+- Applications like Argo CD bring GitOps capabilities to Kubernetes.
+
+### Components of Custom Resources:
+
+1. **Custom Resource Definition (CRD):**
+   - A Custom Resource Definition (CRD) is an extension of the Kubernetes API that allows you to define new types of resources. When you create a CRD, it tells the Kubernetes API server to recognize and handle your new custom resource.
+   - CRDs are how Kubernetes users create their own APIs that look and act like the built-in Kubernetes resources.
+
+2. **Custom Controller:**
+   - A Custom Controller is a process that watches the state of your custom resources and takes action to reconcile the current state with the desired state defined in the custom resource. Without a controller, the custom resource would just exist as data in etcd, and nothing would actually happen in response to it.
+   - The controller is responsible for implementing the logic needed to manage the custom resource.
+
+3. **Custom Resource (CR):**
+   - A Custom Resource (CR) is an instance of a Custom Resource Definition. It is the YAML file that you write as a user or DevOps engineer, which defines the desired state of a particular instance of the custom resource.
+
+### Example Scenario:
+When you create a Deployment in Kubernetes, there’s already a Deployment CRD and a Deployment controller built into Kubernetes. You just need to write a YAML file that defines the desired state of the Deployment. The Kubernetes API server checks your YAML against the Deployment CRD to ensure it's correctly structured. The Deployment controller then monitors this resource and ensures that the desired state is achieved and maintained.
+
+Similarly, for custom resources, if you want to add a new resource type or extend Kubernetes capabilities, you first need to define the CRD for that resource and ensure a custom controller is running to manage instances of the CRD. As a user or DevOps engineer, you then write a YAML file that creates an instance of the custom resource.
+
+Without a custom controller, creating a custom resource through a YAML file won't result in any action—Kubernetes will store the data, but it won't do anything with it.
+
+
